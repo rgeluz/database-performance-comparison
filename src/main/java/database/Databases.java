@@ -8,7 +8,7 @@ public class Databases {
 	private static final List<AbstractDatabase> databases = Arrays.asList(
 			new PostgreSQLDatabase("PostgreSQL"),
 			new HiveHDFSDatabase("Hive")
-			//add more later
+			//TODO add more later
 			);
 	private Databases() { }
 	public static List<AbstractDatabase> list() {
