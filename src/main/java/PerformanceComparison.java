@@ -12,14 +12,22 @@ import java.util.TreeMap;
 
 import main.java.database.AbstractDatabase;
 import main.java.database.Databases;
+import main.java.database.Tests;
 
 import java.util.Map.Entry;
 
 public class PerformanceComparison {
+	
 	private final String fileName;
+	private final String testType;
+	private final String tableName;
+	private final String whereClause;
 	 
-	PerformanceComparison(String fileName){
+	PerformanceComparison(String fileName , String testType, String tableName, String whereClause){
 		this.fileName = fileName; 
+		this.testType = testType;
+		this.tableName = tableName;
+		this.whereClause = whereClause;
 	}
 
 	public void execute(final int loops) throws Exception {
@@ -33,11 +41,11 @@ public class PerformanceComparison {
 			for(AbstractDatabase database : Databases.list()){
 				try {
 					System.out.print("Loop " + (i + 1) + " executing \"" + database.getName() + "\"..."); 
-					Map<String,Object> testResult = database.runTest(this.fileName);    
+					Map<String,Object> testResult = database.runTest(this.fileName, this.testType, this.tableName, this.whereClause);    
 					long time = (long) testResult.get("time");
 					int rowCount = (int) testResult.get("rowCount");
 					System.out.println(" took \"" + database.getName() + "\" " + time + " ms to read " +
-										insertCommas(rowCount) + " rows. "); 
+										insertCommas(rowCount) + " rows. \n"); 
 					stats.get(database.getName())[i] = time;
 				} catch (Throwable ex) {
 					System.out.println(" Database \"" + database.getName() + "\" threw exception " + ex.getMessage());
@@ -129,36 +137,49 @@ public class PerformanceComparison {
 		int numberOfTest = 5;
 		long start = System.currentTimeMillis();
 		
-		//100 row dataset
+		/*//100 row dataset
 		System.out.println(">>>Executing Performance Comparison of querying 100 rows:");
 		String testFile1 = "TestFile_OneHundred.txt";
-		PerformanceComparison oneHundredRowTest = new PerformanceComparison(testFile1);
+		PerformanceComparison oneHundredRowTest = new PerformanceComparison(testFile1, Tests.SELECT_ALL_ROW_10_COL_TEST,  "TestData", "");
 		oneHundredRowTest.execute(numberOfTest);
 		System.out.println("");
 			
 		//10,000 row dataset
 		System.out.println(">>>Executing Performance Comparison of querying 10,000 rows:");
 		String testFile2 = "TestFile_TenThousands.txt"; 
-		PerformanceComparison tenThousandRowTest = new PerformanceComparison(testFile2);
+		PerformanceComparison tenThousandRowTest = new PerformanceComparison(testFile2, Tests.SELECT_ALL_ROW_10_COL_TEST, "TestData", "");
 		tenThousandRowTest.execute(numberOfTest);
 		System.out.println("");
 			
 		//1,000,000 row dataset
 		System.out.println(">>>Executing Performance Comparison of querying 1,000,000 rows:");
 		String testFile3 = "TestFile_OneMillion.txt";
-		PerformanceComparison oneMillionRowTest = new PerformanceComparison(testFile3);
+		PerformanceComparison oneMillionRowTest = new PerformanceComparison(testFile3, Tests.SELECT_ALL_ROW_10_COL_TEST, "TestData", "");
 		oneMillionRowTest.execute(numberOfTest);
 		System.out.println(""); 
 		
 		//10,000,000 row dataset
-		/*System.out.println(">>>Executing Performance Comparison of querying 10,000,000 rows:");
+		System.out.println(">>>Executing Performance Comparison of querying 10,000,000 rows:");
 		String testFile4 = "TestFile_TenMillion.txt";
-		PerformanceComparison tenMillionRowTest = new PerformanceComparison(testFile4);
+		PerformanceComparison tenMillionRowTest = new PerformanceComparison(testFile4, Tests.SELECT_ALL_ROW_10_COL_TEST, "TestData", "");
 		tenMillionRowTest.execute(numberOfTest);
 		System.out.println("");*/
 		
 		//TODO include more if needed
+		//100 row result set out of 10,000,000 row and 10 col dataset
+		System.out.println(">>>Executing Performance Comparison of querying with where condition.");
+		System.out.println(">>>and recieve 100 row result set from a 10 million size table with 10 columns."); 
+		String testFile5 = "TestFile_10MillionRows_10Columns.txt";
+		PerformanceComparison tenMillionRow10ColTest = new PerformanceComparison(testFile5, Tests.SELECT_100_ROW_10_COL_TEST, "TestData_10Col", "WHERE name='DatabaseComparisonTest'");
+		tenMillionRow10ColTest.execute(numberOfTest);
 		
+		//100 row result set out of 10,000,000 row and 120 col dataset
+		System.out.println(">>>Executing Performance Comparison of querying with where condition.");
+		System.out.println(">>>and recieve 100 row result set from a 10 million size table with 120 columns.");
+		String testFile6 = "TestFile_10MillionRows_120Columns.txt";
+		PerformanceComparison tenMillionRow120ColTest = new PerformanceComparison(testFile6, Tests.SELECT_100_ROW_120_COL_TEST, "TestData_120Col", "WHERE name='DatabaseComparisonTest'");
+		tenMillionRow120ColTest.execute(numberOfTest);  
+
 		long time = (System.currentTimeMillis() - start);
 		System.out.println("Database Performance Comparison Test completed."); 
 		System.out.println("Database Performance Comparison Test took " + time + " ms to complete."); 

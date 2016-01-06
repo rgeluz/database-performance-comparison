@@ -17,13 +17,19 @@ public abstract class AbstractDatabase {
 	
 	protected abstract void closeConnection();
 	
-	protected abstract void createTable();
+	protected abstract void createTable(String testType);
+	
+	protected abstract void create10ColTable();
+	
+	protected abstract void createTableWithNameColumn(int numOfCols); 
+
+	protected abstract void createIndexOnTable(String indexName, String colName);
 	
 	protected abstract void deleteTable();
 	
 	protected abstract void loadData(String filePath);  
 	
-	protected abstract void getData();
+	protected abstract void getData(String whereClause);
 	
-	public abstract Map<String,Object> runTest(String fileName);      
+	public abstract Map<String,Object> runTest(String fileName, String testType, String tableName, String whereClause);      
 }

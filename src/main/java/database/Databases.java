@@ -6,8 +6,8 @@ import java.util.List;
 
 public class Databases {
 	private static final List<AbstractDatabase> databases = Arrays.asList(
-			new PostgreSQLDatabase("PostgreSQL"),
-			new HiveHDFSDatabase("Hive")
+			new PostgreSQLDatabase("PostgreSQL")/*,
+			new HiveHDFSDatabase("Hive")*/
 			//TODO add more later
 			);
 	private Databases() { }

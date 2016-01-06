@@ -20,12 +20,12 @@ import org.postgresql.core.BaseConnection;
 import main.java.DataGenerator;
 
 public class PostgreSQLDatabase extends AbstractDatabase {
-	private final static boolean DEBUG_MODE = false; 
+	private final static boolean DEBUG_MODE = true;   
 	private static final int ONE_HUNDRED = 100;
 	private static final int ONE_HUNDRED_THOUSAND = 100000;
 	private static final int ONE_MILLION = 1000000;
 	private static final int TEN_MILLION = 100000000; //NOTE: warning this may take awhile 
-	private String tableName = "TestData";
+	private String tableName;
 	private Connection conn = null;
 	private Statement stmt = null;
 	private ResultSet rs = null;
@@ -37,14 +37,14 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 	@Override
 	protected Boolean connectToDB() { 
 		Boolean connected = false;
-		log("Connecting to " + name + " database.");
+		log("Connecting to " + name + " database....");
 		try {
 			Class.forName("org.postgresql.Driver");
 			conn = DriverManager
 					.getConnection("jdbc:postgresql://localhost:5432/testdb",
 								   "postgres", "postgres1235813");
 			connected = true;	
-			log("Opened database successfully.");
+			log("Opened database successfully. \n");
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.err.println(e.getClass().getName()+": "+e.getMessage());
@@ -66,8 +66,21 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 	}
 	
 	@Override
-	protected void createTable() {
-		log("Creating table " + this.tableName);
+	protected void createTable(String testType) {
+		if(testType.equals(Tests.SELECT_ALL_ROW_10_COL_TEST)){
+			create10ColTable();
+		} else if (testType.equals(Tests.SELECT_100_ROW_10_COL_TEST)){
+			createTableWithNameColumn(10);
+		} else if (testType.equals(Tests.SELECT_100_ROW_120_COL_TEST)){
+			createTableWithNameColumn(120);
+		} else {
+			System.out.println("Could not create table for test" + testType + "\n"); 
+		}
+	}
+	
+	@Override
+	protected void create10ColTable(){   
+		log("Creating table " + this.tableName + "....");
 		try {
 			String sql = "CREATE TABLE " + this.tableName + " " +
 					"(col1 integer, " + 
@@ -80,6 +93,7 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 					"col8 real, " + 
 					"col9 real, " + 
 					"col10 real)";
+			log("sql: " + sql);
 			stmt = conn.createStatement();
 			stmt.executeUpdate(sql);
 			log("Table created successfully.\n");
@@ -89,11 +103,59 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 	}
 
 	@Override
-	protected void deleteTable() {
-		log("Deleting table " + this.tableName);
-		try {
+	protected void createTableWithNameColumn(int numOfCols) {   
+		log("Creating " + numOfCols + " column table " + this.tableName + "....");  
+		try {			
+			String sql = "CREATE TABLE " + this.tableName + " " +
+					"(col1 integer, " + 
+					"name text, ";  
+			sql += addColumns(numOfCols);
+			sql += ")";
+			log("sql: " + sql);
 			stmt = conn.createStatement();
+			stmt.executeUpdate(sql);
+			log("Table created successfully.\n");
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}	
+	}
+
+	private String addColumns(int numOfCols){
+		String columnList = ""; 
+		for(int i=3; i<=numOfCols; i++ ){
+			if(i==numOfCols){   
+				columnList += ("col"+ i + " integer");
+			} else {
+				columnList += ("col"+ i + " integer, ");
+			}
+		}
+		return columnList;
+	}
+	
+	@Override
+	protected void createIndexOnTable(String indexName, String colName) {
+		log("Creating index on table " + this.tableName + "....");
+		try {
+			long start = System.currentTimeMillis(); 
+			String sql = "CREATE INDEX " + indexName + " ON " + this.tableName + "(" + colName + ")";
+			log("sql: " + sql);
+			stmt = conn.createStatement();
+			stmt.executeUpdate(sql);
+			long time = (System.currentTimeMillis() - start); 
+			log("Index created successfully in " + time + " ms.\n");
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+
+	@Override
+	protected void deleteTable() {
+		log("Deleting table " + this.tableName + "....");
+		try {		
 			String sql = "DROP TABLE IF EXISTS " + this.tableName;
+			log("sql: " + sql);
+			stmt = conn.createStatement();
 			stmt.execute(sql);
 			log("Table deleted successfully.\n");
 		} catch (SQLException e) {
@@ -107,8 +169,9 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 
 	@Override
 	protected void loadData(String filePath) {
-		log("Loading data into table " + this.tableName);
+		log("Loading data into table " + this.tableName + "....");
 		try {
+			long start = System.currentTimeMillis(); 
 			conn.setAutoCommit(false);		
 			/*
 			 * https://wiki.postgresql.org/wiki/COPY
@@ -120,26 +183,33 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 			stmt = conn.createStatement();
 			stmt.execute(sql); 
 			conn.commit();
-			log("Loaded data into table " + this.tableName + " successfully. \n");
+			long time = (System.currentTimeMillis() - start); 
+			log("Loaded data into table " + this.tableName + " successfully " + time + " ms. \n");
 		} catch(SQLException e){ 
 			e.printStackTrace();
 		}	
 	}
 
 	@Override
-	protected void getData() {  
-		log("Retrieving data.");
+	protected void getData(String whereClause) {  
+		log("Retrieving data....");
 		try {
 			conn.setAutoCommit(false);
 			stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
 										ResultSet.CONCUR_READ_ONLY); 
-			String sql = "SELECT * FROM " + this.tableName + ";";
+			String sql = "SELECT * FROM " + this.tableName;
+			if(whereClause.isEmpty()){ 
+				sql += ";";
+			} else {
+				sql += " " + whereClause + ";";
+			}
+			log("sql: " + sql);
 			rs = stmt.executeQuery(sql); 
 			
-			//NOTE: use only for debugging. Will effect timing of test if enabled
+			//NOTE: use only for debugging. Will effect timing of test if enabled. Only works for "SELECT_ALL_ROW_10_COL_TEST" test.
 			//displayResultsInTable(); 
 
-			log("Retrieved data successfully.");
+			log("Retrieved data successfully. \n");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -177,6 +247,7 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 	}
 	
 	private int getRowCount(ResultSet resultSet){ 
+		log("Retrieving row count...."); 
 		//See "Get a record count with a SQL Statement" 
 		//http://www.rgagnon.com/javadetails/java-0292.html
 		int rowCount = 0;
@@ -185,6 +256,7 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 				rowCount = resultSet.getRow(); //get the number of rows
 				resultSet.beforeFirst(); //back to initial state
 			}
+			log("Retrieved row count successfully. \n"); 
 		} catch (SQLException e) { 
 			e.printStackTrace();
 		}
@@ -192,42 +264,49 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 	}
 	
 	@Override
-	public Map<String, Object> runTest(String fileName) {
+	public Map<String, Object> runTest(String fileName, String testType, String tableName, String whereClause) {
+		this.tableName = tableName;
 		long time = 0;
 		int rowCount = 0;		
 		File testData = new File("src/main/resources/" + fileName);
 		if(!testData.exists()){
-			System.out.println("The file \"" + fileName + "\" does not exists! Will create a new one....");
-			DataGenerator dataGenerator = new DataGenerator();
-			int numOfRows = ONE_HUNDRED; 
-			dataGenerator.generateData(fileName, numOfRows);
+			System.out.println("The file \"" + fileName + "\"does not exists! Cannot conduct test."); 			
+			/*System.out.println("The file \"" + fileName + "\" does not exists! Will create a new one....");
+			DataGenerator dataGenerator = new DataGenerator(fileName, 
+					                                        Tests.SELECT_ALL_ROW_10_COL_TEST, 
+					                                        ONE_HUNDRED);
+			dataGenerator.generateData();*/
 		}	
 		this.connectToDB();
-		this.deleteTable();
-		this.createTable(); 
-		this.loadData(testData.getAbsolutePath()); 
+		//this.deleteTable();
+		//this.createTable(testType);
+		/*if(testType.equals(Tests.SELECT_100_ROW_10_COL_TEST) || testType.equals(Tests.SELECT_100_ROW_120_COL_TEST)){
+			this.createIndexOnTable(this.tableName + "_name_index", "name");  //only works for the name column table test
+		}*/
+		//this.loadData(testData.getAbsolutePath()); 
 		//only time the data retrieval
 		long start = System.currentTimeMillis();
-		this.getData(); 
+		this.getData(whereClause); 
 		time = (System.currentTimeMillis() - start); 
 		rowCount = getRowCount(rs);
-		this.deleteTable();
+		//this.deleteTable();
 		this.closeConnection();
 		Map<String,Object> testResult = new HashMap<String,Object>(); 
 		testResult.put("time", time);
 		testResult.put("rowCount", rowCount);
 		return testResult;
 	}
-	
+
 	public static void main (String[] args) {
-		System.out.println("Test PostgreSQLDatabase: ");
-		String fileName = "TestData.txt" ;		  
+		System.out.println("Test PostgreSQLDatabase: "); 	  
 		PostgreSQLDatabase postgreSQLDB = new PostgreSQLDatabase("PostgreSQL"); 
-		System.out.println(" executing \"" + postgreSQLDB.getName() +"\"..."); 
-		Map<String,Object> testResult = postgreSQLDB.runTest(fileName);   
+		System.out.println("Executing \"" + postgreSQLDB.getName() +"\"....");  
+		//Map<String,Object> testResult = postgreSQLDB.runTest("TestFile_OneHundred.txt", Tests.SELECT_ALL_ROW_10_COL_TEST, "TestData", ""); 
+		//Map<String,Object> testResult = postgreSQLDB.runTest("TestFile_10MillionRows_10Columns.txt", Tests.SELECT_100_ROW_10_COL_TEST, "TestData_10Col", "WHERE name='DatabaseComparisonTest'");   
+		Map<String,Object> testResult = postgreSQLDB.runTest("TestFile_10MillionRows_120Columns.txt", Tests.SELECT_100_ROW_120_COL_TEST, "TestData_120Col", "WHERE name='DatabaseComparisonTest'");   
 		long time = (long) testResult.get("time");
 		int rowCount = (int) testResult.get("rowCount"); 
-		System.out.println(" took \"" + postgreSQLDB.getName() + "\" " + time + " ms to read " +
+		System.out.println("Took \"" + postgreSQLDB.getName() + "\" " + time + " ms to read " +
 							insertCommas(rowCount) + " rows. ");  
 		System.out.println("Completed PostgreSQLDatabase Test.");
 	}
