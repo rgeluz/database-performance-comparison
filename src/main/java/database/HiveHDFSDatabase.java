@@ -12,6 +12,7 @@ import java.util.Map;
 
 public class HiveHDFSDatabase extends AbstractDatabase {
 	private final static boolean DEBUG_MODE = true;  
+	private final static boolean RECREATE_DATA = false; 
 	private String tableName; 
 							
 	private Connection conn = null;
@@ -179,15 +180,17 @@ public class HiveHDFSDatabase extends AbstractDatabase {
 			stmt = conn.createStatement();
 			stmt.execute(sql); 
 			long time = (System.currentTimeMillis() - start);
-			log("Loaded data into table " + this.tableName + " successfully " + time + " ms. \n");
+			log("Loaded data into table " + this.tableName + " successfully in " + time + " ms. \n");
 		} catch(SQLException e){ 
 			e.printStackTrace();
 		}	
 	}
 
 	@Override
-	protected void getData(String whereClause) {   
+	protected long getData(String whereClause) {    
 		log("Retrieving data....");
+		long start = System.currentTimeMillis();
+		long time = 0;
 		try {
 			stmt = conn.createStatement();  
 			String sql = "SELECT * FROM " + this.tableName; 
@@ -204,11 +207,12 @@ public class HiveHDFSDatabase extends AbstractDatabase {
 			
 			//NOTE: use only for debugging. Will effect timing of test if enabled. only works for SELECT_ALL_ROW_10_COL_TEST test
 			//displayResultsInTable();
-
-			log("Retrieved data successfully. \n");
+			time = (System.currentTimeMillis() - start); 
+			log("Retrieved data successfully in " + time + " ms. \n");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		return time;
 	}
 	
 	private void displayResultsInTable(){ 
@@ -285,20 +289,21 @@ public class HiveHDFSDatabase extends AbstractDatabase {
 		this.tableName = tableName;
 		long time = 0;
 		int rowCount = 0;
+		
 		this.connectToDB();
-		//this.deleteTable();
-		//this.createTable(testType);
-		/*if(testType.equals(Tests.SELECT_100_ROW_10_COL_TEST) || testType.equals(Tests.SELECT_100_ROW_120_COL_TEST)){
-			this.createIndexOnTable("name_index", "name");  //only works for the name column table test
-		}*/
-		//this.loadData("/usr/tmp/"+fileName);    
-		//only time the data retrieval
-		long start = System.currentTimeMillis();
-		this.getData(whereClause); 
-		time = (System.currentTimeMillis() - start);  
+		if(RECREATE_DATA){
+			this.deleteTable();
+			this.createTable(testType);
+			if(testType.equals(Tests.SELECT_100_ROW_10_COL_TEST) || testType.equals(Tests.SELECT_100_ROW_120_COL_TEST)){
+				this.createIndexOnTable(this.tableName + "name_index", "name");  //only works for the name column table test
+			}
+			this.loadData("/usr/tmp/"+fileName);   
+		}		 	
+		time = this.getData(whereClause);  //only time the data retrieval
 		rowCount = getRowCount(rs, whereClause);
 		//this.deleteTable();
 		this.closeConnection();
+		
 		Map<String,Object> testResult = new HashMap<String,Object>(); 
 		testResult.put("time", time);
 		testResult.put("rowCount", rowCount);

@@ -21,6 +21,7 @@ import main.java.DataGenerator;
 
 public class PostgreSQLDatabase extends AbstractDatabase {
 	private final static boolean DEBUG_MODE = true;   
+	private final static boolean RECREATE_DATA = false;
 	private static final int ONE_HUNDRED = 100;
 	private static final int ONE_HUNDRED_THOUSAND = 100000;
 	private static final int ONE_MILLION = 1000000;
@@ -184,15 +185,17 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 			stmt.execute(sql); 
 			conn.commit();
 			long time = (System.currentTimeMillis() - start); 
-			log("Loaded data into table " + this.tableName + " successfully " + time + " ms. \n");
+			log("Loaded data into table " + this.tableName + " successfully in " + time + " ms. \n");
 		} catch(SQLException e){ 
 			e.printStackTrace();
 		}	
 	}
 
 	@Override
-	protected void getData(String whereClause) {  
+	protected long getData(String whereClause) {  
 		log("Retrieving data....");
+		long start = System.currentTimeMillis();
+		long time = 0;
 		try {
 			conn.setAutoCommit(false);
 			stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
@@ -208,11 +211,12 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 			
 			//NOTE: use only for debugging. Will effect timing of test if enabled. Only works for "SELECT_ALL_ROW_10_COL_TEST" test.
 			//displayResultsInTable(); 
-
-			log("Retrieved data successfully. \n");
+			time = (System.currentTimeMillis() - start); 
+			log("Retrieved data successfully in " + time + " ms. \n");
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		return time;
 	} 
 	
 	private void displayResultsInTable(){  
@@ -276,21 +280,22 @@ public class PostgreSQLDatabase extends AbstractDatabase {
 					                                        Tests.SELECT_ALL_ROW_10_COL_TEST, 
 					                                        ONE_HUNDRED);
 			dataGenerator.generateData();*/
-		}	
+		}
+		
 		this.connectToDB();
-		//this.deleteTable();
-		//this.createTable(testType);
-		/*if(testType.equals(Tests.SELECT_100_ROW_10_COL_TEST) || testType.equals(Tests.SELECT_100_ROW_120_COL_TEST)){
-			this.createIndexOnTable(this.tableName + "_name_index", "name");  //only works for the name column table test
-		}*/
-		//this.loadData(testData.getAbsolutePath()); 
-		//only time the data retrieval
-		long start = System.currentTimeMillis();
-		this.getData(whereClause); 
-		time = (System.currentTimeMillis() - start); 
+		if(RECREATE_DATA){
+			this.deleteTable();
+			this.createTable(testType);
+			if(testType.equals(Tests.SELECT_100_ROW_10_COL_TEST) || testType.equals(Tests.SELECT_100_ROW_120_COL_TEST)){
+				this.createIndexOnTable(this.tableName + "_name_index", "name");  //only works for the name column table test
+			}
+			this.loadData(testData.getAbsolutePath()); 
+		}	
+		time = this.getData(whereClause); 	//only time the data retrieval	
 		rowCount = getRowCount(rs);
 		//this.deleteTable();
 		this.closeConnection();
+		
 		Map<String,Object> testResult = new HashMap<String,Object>(); 
 		testResult.put("time", time);
 		testResult.put("rowCount", rowCount);

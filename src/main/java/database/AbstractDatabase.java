@@ -29,7 +29,7 @@ public abstract class AbstractDatabase {
 	
 	protected abstract void loadData(String filePath);  
 	
-	protected abstract void getData(String whereClause);
+	protected abstract long getData(String whereClause); 
 	
 	public abstract Map<String,Object> runTest(String fileName, String testType, String tableName, String whereClause);      
 }

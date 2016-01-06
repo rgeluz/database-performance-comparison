@@ -168,14 +168,14 @@ public class PerformanceComparison {
 		//TODO include more if needed
 		//100 row result set out of 10,000,000 row and 10 col dataset
 		System.out.println(">>>Executing Performance Comparison of querying with where condition.");
-		System.out.println(">>>and recieve 100 row result set from a 10 million size table with 10 columns."); 
+		System.out.println(">>>and recieve 100 row result set from a 10 million row size table with 10 columns."); 
 		String testFile5 = "TestFile_10MillionRows_10Columns.txt";
 		PerformanceComparison tenMillionRow10ColTest = new PerformanceComparison(testFile5, Tests.SELECT_100_ROW_10_COL_TEST, "TestData_10Col", "WHERE name='DatabaseComparisonTest'");
 		tenMillionRow10ColTest.execute(numberOfTest);
 		
 		//100 row result set out of 10,000,000 row and 120 col dataset
 		System.out.println(">>>Executing Performance Comparison of querying with where condition.");
-		System.out.println(">>>and recieve 100 row result set from a 10 million size table with 120 columns.");
+		System.out.println(">>>and recieve 100 row result set from a 10 million row size table with 120 columns.");
 		String testFile6 = "TestFile_10MillionRows_120Columns.txt";
 		PerformanceComparison tenMillionRow120ColTest = new PerformanceComparison(testFile6, Tests.SELECT_100_ROW_120_COL_TEST, "TestData_120Col", "WHERE name='DatabaseComparisonTest'");
 		tenMillionRow120ColTest.execute(numberOfTest);  
